@@ -1,7 +1,6 @@
 /*
- * Copyright 2010-2014 Regents of the University of Minnesota.
+ * Copyright 2014 Michael Tesch.
  * This file subject to terms of Creative Commons CC BY-NC 4.0, see LICENSE.html
- * Copyright 2012 Michael Tesch.  All rights reserved.
  *
  * author(s): Michael Tesch (tesch1@gmail.com),
  */
