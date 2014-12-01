@@ -41,6 +41,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
   if (nrhs != 1 || nlhs != 1 || !mxIsStruct(prhs[0]))
     mexErrMsgTxt(usage);
 
+  /* convert mxArray prhs[0] to c-struct in dp */
   mwSize count;
   demo_struct * dp = mexArrayStruct(NARRAY(ds_fields), ds_fields, prhs[0], &count);
 
