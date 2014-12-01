@@ -9,7 +9,7 @@ typedef struct {
   int i1;
 } demo_struct;
 
-/*! descriptions of all fields in an varian main header
+/*! descriptions of all fields in the demo_struct
  */
 static struct_fielddesc_t ds_fields[] = {
   MC_FIELD_DEF(d1, TY_DOUBLE, demo_struct),
