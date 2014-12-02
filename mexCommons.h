@@ -52,7 +52,7 @@ public:
   static void restore() {
     std::cout.rdbuf(oldoutbuf());
   }
- private:
+private:
   static mexstream & getmexout() {
     static mexstream mexout;
     return mexout;
@@ -64,14 +64,35 @@ public:
     oldoutbuf = oldbuf;
     return tmp;
   }
+  void drawnow() {
+#if 0
+#if 1
+    /*mexEvalString("drawnow;"); /* let matlab flush the printf */
+    /*mexEvalString("pause(0.0001);"); /* let matlab flush the printf */
+    mexEvalString("drawnow;"); /* let matlab flush the printf */
+#else
+    mxArray * exception;
+    exception = mexCallMATLABWithTrap(0, NULL, 0, NULL, "drawnow"); /* let matlab flush the printf */
+    if(exception != NULL) {
+      fprintf(stderr, "EXCEPTION\n");
+      /* Throw the MException returned by mexCallMATLABWithTrap
+       * after cleaning up any dynamically allocated resources */
+      mexCallMATLAB(0, (mxArray **)NULL, 
+                    1, &exception, "throw");
+    }
+#endif
+#endif
+  }
 protected:
   virtual std::streamsize xsputn(const char *s, std::streamsize n) {
     mexPrintf("%.*s",n,s);
+    drawnow();
     return n;
   }
   virtual int overflow(int c = EOF) {
     if (c != EOF) {
       mexPrintf("%.1s",&c);
+      drawnow();
     }
     return 1;
   }

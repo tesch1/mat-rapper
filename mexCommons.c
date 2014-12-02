@@ -33,9 +33,9 @@ int mexCommonsPrintfCallback(const char *format, ...)
 {
   int ret = mexPrintf(format);
 #if 1
-  /*mexEvalString("drawnow;"); /* let matlab flush the printf */
-  /*mexEvalString("pause(0.0001);"); /* let matlab flush the printf */
-  mexEvalString("drawnow;"); /* let matlab flush the printf */
+  /*mexEvalString("drawnow;"); */       /* let matlab flush the printf */
+  /*mexEvalString("pause(0.0001);"); */ /* let matlab flush the printf */
+  mexEvalString("drawnow;");            /* let matlab flush the printf */
 #else
   mxArray * exception;
   exception = mexCallMATLABWithTrap(0, NULL, 0, NULL, "drawnow"); /* let matlab flush the printf */
@@ -53,11 +53,11 @@ int mexCommonsPrintfCallback(const char *format, ...)
 size_t sizeof_ftype(enum _ftype ftype)
 {
   switch (ftype) {
-  case TY_U32: return sizeof(uint32_t);
-  case TY_U16: return sizeof(uint16_t);
-  case TY_S16: return sizeof(int16_t);
-  case TY_FLOAT: return sizeof(float);
-  case TY_S32: return sizeof(int32_t);
+  case TY_U16:    return sizeof(uint16_t);
+  case TY_S16:    return sizeof(int16_t);
+  case TY_U32:    return sizeof(uint32_t);
+  case TY_S32:    return sizeof(int32_t);
+  case TY_FLOAT:  return sizeof(float);
   case TY_DOUBLE: return sizeof(double);
   }
   return 0;
@@ -179,7 +179,10 @@ mxArray * mexStructToArray(struct_fielddesc_t * sfields, size_t count, void * ba
     case mxUINT64_CLASS: return (ctype)*(uint64_t *)vv;                 \
     case mxLOGICAL_CLASS:                                               \
     case mxVOID_CLASS:                                                  \
-      break;                                                            \
+    default:                                                            \
+      mexErrMsgTxt("mexArrayToStruct failed trying to read "            \
+                   "into struct field of type " # mctype);              \
+      return 0;                                                         \
     }                                                                   \
   }
 

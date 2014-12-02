@@ -11,7 +11,7 @@ typedef struct {
   float f2[2];
 } demo_struct;
 
-/*! descriptions of all fields in an varian main header
+/*! descriptions of all fields in some structure
  */
 static struct_fielddesc_t ds_fields[] = {
   MC_FIELD_DEF(d1, TY_DOUBLE, demo_struct),
@@ -24,8 +24,7 @@ static struct_fielddesc_t ds_fields[] = {
 /* [a] = commonsdemo(b) */
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
-  char * usage = 
-    "usage: [a] = commonsdemo(b)\n";
+  const char * usage = "usage: [a] = commonsdemo(b)\n";
 
   if (nrhs != 1 || nlhs != 1 || !mxIsStruct(prhs[0]))
     mexErrMsgTxt(usage);
@@ -39,5 +38,46 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
   /* convert it back */
   plhs[0] = mexStructToArray(ds_fields, count, dp);
+
+  /* dp was allocated with malloc() in mexArrayToStruct(), free it */
+  free(dp);
 }
+```
+and to call that from matlab...
+```
+>> d
+d = 
+
+    d1: [3x1 double]
+    f1: [3x1 double]
+    i1: [3x1 double]
+    f2: [3x2 double]
+
+
+>> d.f2
+
+ans =
+
+    10    13
+    11    14
+    12    15
+
+>> f = commonsdemo(d);
+>> f
+
+f = 
+
+    d1: [2x1 double]
+    f1: [2x1 single]
+    i1: [2x1 int32]
+    f2: [2x2 single]
+
+>> f.f2
+
+ans =
+
+    10    13
+    11    14
+
+>> 
 ```

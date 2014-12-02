@@ -39,8 +39,7 @@ static struct_fielddesc_t ds_fields[] = {
 /* [a] = commonsdemo(b) */
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
-  char * usage = 
-    "usage: [a] = commonsdemo(b)\n";
+  const char * usage = "usage: [a] = commonsdemo(b)\n";
 
   if (nrhs != 1 || nlhs != 1 || !mxIsStruct(prhs[0]))
     mexErrMsgTxt(usage);
@@ -54,4 +53,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
   /* convert it back */
   plhs[0] = mexStructToArray(ds_fields, count, dp);
+
+  /* dp was allocated with malloc() in mexArrayToStruct(), free it */
+  free(dp);
 }
