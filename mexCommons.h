@@ -23,17 +23,14 @@ typedef struct {
   enum _ftype type;     /*!<    type of data stored in field */
 } struct_fielddesc_t;
 
-mxArray * mexStructToArray(int nfields, struct_fielddesc_t * sfields, size_t count, void * data);
-void * mexArrayToStruct(int nfields, struct_fielddesc_t * sfields, const mxArray * array, mwSize * count);
+mxArray * mexStructToArray(struct_fielddesc_t * sfields, size_t count, void * data);
+void * mexArrayToStruct(struct_fielddesc_t * sfields, const mxArray * array, mwSize * count);
 
 int mexCommonsPrintfCallback(const char *format, ...);
 
 #define MC_FIELD_DEF(fname, ftype, structtype) {#fname, (size_t)&((structtype*)NULL)->fname, \
       sizeof(((structtype*)NULL)->fname), ftype}
 
-#ifndef NARRAY
-#define NARRAY(a) ((sizeof a) / sizeof (a)[0])
-#endif
 #ifndef MAX
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #endif

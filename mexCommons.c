@@ -50,28 +50,62 @@ int mexCommonsPrintfCallback(const char *format, ...)
   return ret;
 }
 
-/*! \brief      Construct a mex array from an array of structs described by structfields
- */
-mxArray * mexStructToArray(int nfields, struct_fielddesc_t * sfields, size_t count, void * base)
-{
-  mxArray * array;
-  int ii, jj;
-  size_t structbytes = 0;
+/* to figure out compiler alignment */
+struct teststruct {
+  double firstfield;
+  char testfield;
+};
 
+/* gather some info about the fields */
+static void grok_fielddesc(const struct_fielddesc_t * sfields, 
+                           int * Pnfields, size_t * Pstructbytes)
+{
+  int nfields;
+  size_t structbytes = 0;
+  size_t structalign = sizeof(struct teststruct) - sizeof(double);
+  int ii, jj;
+  for (ii = 0; ii < 100; ii++) {
+    if (!sfields[ii].name)
+      break;
+  }
+  nfields = ii;
+  if (nfields == 100)
+    mexWarnMsgTxt("mexCommons: more than 100 fields in struct desc, maybe forgot to terminate?");
   /* Construct outdata */
-  const char ** field_names = mxCalloc(nfields, sizeof(char **));
   for (ii = 0; ii < nfields; ii++) {
     int known = 0;
 
-    field_names[ii] = sfields[ii].name;
-
-    /* make sure [ii] isnt already accounted for */
+    /* make sure [ii] isnt already accounted for (ie an alias) */
     for (jj = 0; jj < ii; jj++) {
       if (sfields[ii].offset == sfields[jj].offset)
         known = 1;
     }
     if (!known)
       structbytes += sfields[ii].size;
+  }
+  /* align bytes */
+  structbytes = structalign * ((structbytes + structalign - 1) / structalign);
+  /* returns */
+  *Pnfields = nfields;
+  *Pstructbytes = structbytes;
+}
+
+/*! \brief      Construct a mex array from an array of structs described by structfields
+ */
+mxArray * mexStructToArray(struct_fielddesc_t * sfields, size_t count, void * base)
+{
+  mxArray * array;
+  int ii, jj;
+  size_t structbytes;
+  int nfields;
+
+  /* get nfields and struct length */
+  grok_fielddesc(sfields, &nfields, &structbytes);
+
+  /* Construct outdata */
+  const char ** field_names = mxCalloc(nfields, sizeof(char **));
+  for (ii = 0; ii < nfields; ii++) {
+    field_names[ii] = sfields[ii].name;
   }
 
   array = mxCreateStructMatrix(1, 1, nfields, field_names);
@@ -147,43 +181,25 @@ CAST_READ(double, TY_DOUBLE);
 
 #undef CAST_READ
 
-/* to figure out compiler alignment */
-struct teststruct {
-  double firstfield;
-  char testfield;
-};
-
 /*! \brief      Construct a struct from a mexArray of structs described by structfields
  */
-void * mexArrayToStruct(int nfields, struct_fielddesc_t * sfields, const mxArray * array, mwSize * Pcount)
+void * mexArrayToStruct(struct_fielddesc_t * sfields, const mxArray * array, mwSize * Pcount)
 {
   int ii, jj;
   size_t structbytes = 0;
-  size_t structalign = sizeof(struct teststruct) - sizeof(double);
+  int nfields;
   size_t narrayfields = mxGetNumberOfFields(array);
+
+  /* get nfields and struct length */
+  grok_fielddesc(sfields, &nfields, &structbytes);
+
   if (narrayfields < nfields) {
-    mexPrintf("mexArrayToStruct: failed, wrong number of fields in array: %zd < %d\n", narrayfields, nfields);
+    mexPrintf("mexArrayToStruct: failed, wrong number of fields in array: %zd < %d\n",
+              narrayfields, nfields);
     mexErrMsgTxt("fail");
   }
 
   /* Construct outdata */
-  for (ii = 0; ii < nfields; ii++) {
-    int known = 0;
-
-    /*field_names[ii] = sfields[ii].name; */
-    /* todo: double-check field name ? */
-
-    /* make sure [ii] isnt already accounted for (ie an alias) */
-    for (jj = 0; jj < ii; jj++) {
-      if (sfields[ii].offset == sfields[jj].offset)
-        known = 1;
-    }
-    if (!known)
-      structbytes += sfields[ii].size;
-  }
-  /* align bytes */
-  structbytes = structalign * ((structbytes + structalign - 1) / structalign);
-
   /*mexPrintf("mexArrayToStruct structbytes: %d align:%d\n", (int)structbytes, (int)structalign);*/
 
   /* get number of entries from size of first field */
