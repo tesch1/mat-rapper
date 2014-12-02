@@ -12,7 +12,7 @@
 #include "mex.h"
 
 #include "mexCommons.h"
-#define DEBUG
+
 /*! \brief      Reroute printf() calls out through Matlab's mexPrintf()
  *
  * Utility function to help patch normal c-output into matlab/octave's
@@ -55,23 +55,23 @@ int mexCommonsPrintfCallback(const char *format, ...)
 mxArray * mexStructToArray(int nfields, struct_fielddesc_t * sfields, size_t count, void * base)
 {
   mxArray * array;
-  int i, j;
+  int ii, jj;
   size_t structbytes = 0;
 
   /* Construct outdata */
   const char ** field_names = mxCalloc(nfields, sizeof(char **));
-  for (i = 0; i < nfields; i++) {
+  for (ii = 0; ii < nfields; ii++) {
     int known = 0;
 
-    field_names[i] = sfields[i].name;
+    field_names[ii] = sfields[ii].name;
 
-    /* make sure [i] isnt already accounted for */
-    for (j = 0; j < i; j++) {
-      if (sfields[i].offset == sfields[j].offset)
+    /* make sure [ii] isnt already accounted for */
+    for (jj = 0; jj < ii; jj++) {
+      if (sfields[ii].offset == sfields[jj].offset)
         known = 1;
     }
     if (!known)
-      structbytes += sfields[i].size;
+      structbytes += sfields[ii].size;
   }
 
   array = mxCreateStructMatrix(1, 1, nfields, field_names);
@@ -80,116 +80,72 @@ mxArray * mexStructToArray(int nfields, struct_fielddesc_t * sfields, size_t cou
   /* mexWarnMsgTxt("finished making array\n"); */
 
   /* make mxArrays from each field */
-  for (i = 0; i < nfields; i++) {
+  for (ii = 0; ii < nfields; ii++) {
     mxArray *field_value = NULL;
     int array_count;
 
-    switch (sfields[i].type) {
-    case TY_U32: {
-      uint32_t * data;
-      array_count = sfields[i].size / sizeof(uint32_t);
-      field_value = mxCreateNumericMatrix(count, array_count, mxUINT32_CLASS, mxREAL);
-      data = mxGetData(field_value);
-      for (j = 0; j < count; j++) {
-        int k;
-        uint32_t * start = (uint32_t *)(base + j * structbytes + sfields[i].offset);
-        for (k = 0; k < array_count; k++) {
-          data[k * count + j] = start[k];
-        }
+#define CASE_TYPE(FTYPEID, CTYPE, MXTYPE)                               \
+      case FTYPEID: {                                                   \
+        CTYPE * data;                                                   \
+        array_count = sfields[ii].size / sizeof(CTYPE);                 \
+        field_value = mxCreateNumericMatrix(count, array_count, MXTYPE, mxREAL); \
+        data = mxGetData(field_value);                                  \
+        for (jj = 0; jj < count; jj++) {                                \
+          int kk;                                                       \
+          CTYPE * start = (CTYPE *)(base + jj * structbytes + sfields[ii].offset); \
+          for (kk = 0; kk < array_count; kk++) {                        \
+            data[kk * count + jj] = start[kk];                          \
+          }                                                             \
+        }                                                               \
+        break;                                                          \
       }
-      break;
-    }
-    case TY_S32: {
-      int32_t * data;
-      array_count = sfields[i].size / sizeof(int32_t);
-      field_value = mxCreateNumericMatrix(count, array_count, mxINT32_CLASS, mxREAL);
-      data = mxGetData(field_value);
-      for (j = 0; j < count; j++) {
-        int k;
-        int32_t * start = (int32_t *)(base + j * structbytes + sfields[i].offset);
-        for (k = 0; k < array_count; k++) {
-          data[k * count + j] = start[k];
-        }
-      }
-      break;
-    }
-    case TY_U16: {
-      uint16_t * data;
-      array_count = sfields[i].size / sizeof(uint16_t);
-      field_value = mxCreateNumericMatrix(count, array_count, mxUINT16_CLASS, mxREAL);
-      data = mxGetData(field_value);
-      for (j = 0; j < count; j++) {
-        int k;
-        uint16_t * start = (uint16_t *)(base + j * structbytes + sfields[i].offset);
-        for (k = 0; k < array_count; k++) {
-          data[k * count + j] = start[k];
-        }
-      }
-      break;
-    }
-    case TY_FLOAT: {
-      float * data;
-      array_count = sfields[i].size / sizeof(float);
-      field_value = mxCreateNumericMatrix(count, array_count, mxSINGLE_CLASS, mxREAL);
-      data = mxGetData(field_value);
-      for (j = 0; j < count; j++) {
-        int k;
-        float * start = (float *)(base + j * structbytes + sfields[i].offset);
-        for (k = 0; k < array_count; k++) {
-          data[k * count + j] = start[k];
-        }
-      }
-      break;
-    }
-    case TY_DOUBLE: {
-      double * data;
-      array_count = sfields[i].size / sizeof(double);
-      field_value = mxCreateNumericMatrix(count, array_count, mxDOUBLE_CLASS, mxREAL);
-      data = mxGetData(field_value);
-      for (j = 0; j < count; j++) {
-        int k;
-        double * start = (double *)(base + j * structbytes + sfields[i].offset);
-        for (k = 0; k < array_count; k++) {
-          data[k * count + j] = start[k];
-        }
-      }
-      break;
-    }
+
+    switch (sfields[ii].type) {
+      CASE_TYPE(TY_U32, uint32_t, mxUINT32_CLASS);
+      CASE_TYPE(TY_S32, int32_t, mxINT32_CLASS);
+      CASE_TYPE(TY_U16, uint16_t, mxUINT16_CLASS);
+      CASE_TYPE(TY_S16, int16_t, mxINT16_CLASS);
+      CASE_TYPE(TY_FLOAT, float, mxSINGLE_CLASS);
+      CASE_TYPE(TY_DOUBLE, double, mxDOUBLE_CLASS);
+#undef CASE_TYPE
     default:
-      mexErrMsgTxt("internal error");
+      mexErrMsgTxt("mexStructToArray() internal error, field type not recognized");
     }
 
-    mxSetFieldByNumber(array, 0, i, field_value);
+    mxSetFieldByNumber(array, 0, ii, field_value);
   }
   return array;
 }
 
-#define CAST_TO(ctype, mctype)                                          \
+#define CAST_READ(ctype, mctype)                                        \
   ctype mctype##_read(mxArray * array, mwSize index) {                  \
-  void * vv = (((void *)mxGetData(array)) + mxGetElementSize(array) * index); \
-  switch (mxGetClassID(array)) {                                        \
-  case mxCHAR_CLASS: return (ctype)*(char *)vv;                         \
-  case mxDOUBLE_CLASS: return (ctype)*(double *)vv;                     \
-  case mxSINGLE_CLASS: return (ctype)*(float *)vv;                      \
-  case mxINT8_CLASS: return (ctype)*(signed char *)vv;                  \
-  case mxUINT8_CLASS: return (ctype)*(unsigned char *)vv;               \
-  case mxINT16_CLASS: return (ctype)*(int16_t *)vv;                     \
-  case mxUINT16_CLASS: return (ctype)*(uint16_t *)vv;                   \
-  case mxINT32_CLASS: return (ctype)*(int32_t *)vv;                     \
-  case mxUINT32_CLASS: return (ctype)*(uint32_t *)vv;                   \
-  case mxINT64_CLASS: return (ctype)*(int64_t *)vv;                     \
-  case mxUINT64_CLASS: return (ctype)*(uint64_t *)vv;                   \
-  case mxLOGICAL_CLASS:                                                 \
-  case mxVOID_CLASS:                                                    \
-    break;                                                              \
-  } }
+    void * vv = (((void *)mxGetData(array)) + mxGetElementSize(array) * index); \
+    switch (mxGetClassID(array)) {                                      \
+    case mxCHAR_CLASS: return (ctype)*(char *)vv;                       \
+    case mxDOUBLE_CLASS: return (ctype)*(double *)vv;                   \
+    case mxSINGLE_CLASS: return (ctype)*(float *)vv;                    \
+    case mxINT8_CLASS: return (ctype)*(signed char *)vv;                \
+    case mxUINT8_CLASS: return (ctype)*(unsigned char *)vv;             \
+    case mxINT16_CLASS: return (ctype)*(int16_t *)vv;                   \
+    case mxUINT16_CLASS: return (ctype)*(uint16_t *)vv;                 \
+    case mxINT32_CLASS: return (ctype)*(int32_t *)vv;                   \
+    case mxUINT32_CLASS: return (ctype)*(uint32_t *)vv;                 \
+    case mxINT64_CLASS: return (ctype)*(int64_t *)vv;                   \
+    case mxUINT64_CLASS: return (ctype)*(uint64_t *)vv;                 \
+    case mxLOGICAL_CLASS:                                               \
+    case mxVOID_CLASS:                                                  \
+      break;                                                            \
+    }                                                                   \
+  }
 
-CAST_TO(uint16_t, TY_U16);
-CAST_TO(int16_t, TY_S16);
-CAST_TO(uint32_t, TY_U32);
-CAST_TO(int32_t, TY_S32);
-CAST_TO(float, TY_FLOAT);
-CAST_TO(double, TY_DOUBLE);
+CAST_READ(uint16_t, TY_U16);
+CAST_READ(int16_t, TY_S16);
+CAST_READ(uint32_t, TY_U32);
+CAST_READ(int32_t, TY_S32);
+CAST_READ(float, TY_FLOAT);
+CAST_READ(double, TY_DOUBLE);
+
+#undef CAST_READ
 
 /* to figure out compiler alignment */
 struct teststruct {
@@ -206,7 +162,7 @@ void * mexArrayToStruct(int nfields, struct_fielddesc_t * sfields, const mxArray
   size_t structalign = sizeof(struct teststruct) - sizeof(double);
   size_t narrayfields = mxGetNumberOfFields(array);
   if (narrayfields < nfields) {
-    mexPrintf("mexArrayStruct: failed, wrong number of fields in array: %zd < %d\n", narrayfields, nfields);
+    mexPrintf("mexArrayToStruct: failed, wrong number of fields in array: %zd < %d\n", narrayfields, nfields);
     mexErrMsgTxt("fail");
   }
 
@@ -228,7 +184,7 @@ void * mexArrayToStruct(int nfields, struct_fielddesc_t * sfields, const mxArray
   /* align bytes */
   structbytes = structalign * ((structbytes + structalign - 1) / structalign);
 
-  /*mexPrintf("mexArrayStruct structbytes: %d align:%d\n", (int)structbytes, (int)structalign);*/
+  /*mexPrintf("mexArrayToStruct structbytes: %d align:%d\n", (int)structbytes, (int)structalign);*/
 
   /* get number of entries from size of first field */
   *Pcount = 0;
@@ -236,18 +192,18 @@ void * mexArrayToStruct(int nfields, struct_fielddesc_t * sfields, const mxArray
   mwSize count = dims[0];
   void * base = malloc(structbytes * count);
   if (!base) {
-    mexErrMsgTxt("mexArrayStruct() malloc failed");
+    mexErrMsgTxt("mexArrayToStruct() malloc failed");
     return NULL;
   }
 
 #ifdef DEBUG
-  mexPrintf("mexArrayStruct count: %d structbytes: %d\n", (int)count, structbytes);
+  mexPrintf("mexArrayToStruct count: %d structbytes: %d\n", (int)count, structbytes);
 #endif
 
   /* get mxArrays into each field */
   for (ii = 0; ii < nfields; ii++) {
 #ifdef DEBUG
-    mexPrintf("mexArrayStruct: getting field %s\n", sfields[ii].name);
+    mexPrintf("mexArrayToStruct: getting field %s\n", sfields[ii].name);
 #endif
     mxArray *field_value = NULL;
     for (jj = 0; jj < narrayfields; jj++)
@@ -256,13 +212,13 @@ void * mexArrayToStruct(int nfields, struct_fielddesc_t * sfields, const mxArray
 
     if (!field_value) {
       free(base);
-      mexPrintf("mexArrayStruct: unable to find field %s\n", sfields[ii].name);
+      mexPrintf("mexArrayToStruct: unable to find field %s\n", sfields[ii].name);
       mexErrMsgTxt("fail.");
       return NULL;
     }
     if (count != mxGetM(field_value)) {
       free(base);
-      mexPrintf("mexArrayStruct: field %s has wrong number of rows: %d / %d\n", 
+      mexPrintf("mexArrayToStruct: field %s has wrong number of rows: %d / %d\n", 
                 sfields[ii].name, (int)mxGetM(field_value), count);
       mexErrMsgTxt("fail.");
       return NULL;
@@ -272,8 +228,8 @@ void * mexArrayToStruct(int nfields, struct_fielddesc_t * sfields, const mxArray
 #define CASE_TYPE(FTYPEID, CTYPE)                                       \
       case FTYPEID: {                                                   \
         array_count = sfields[ii].size / sizeof(CTYPE);                 \
-        if (1)                                                          \
-          mexPrintf("mexArrayStruct: getting field %s, count=%d array_count=%d\n", \
+        if (0)                                                          \
+          mexPrintf("mexArrayToStruct: getting field %s, count=%d array_count=%d\n", \
                     sfields[ii].name, count, array_count);               \
         for (jj = 0; jj < count; jj++) {                                \
           int kk;                                                       \
@@ -291,8 +247,9 @@ void * mexArrayToStruct(int nfields, struct_fielddesc_t * sfields, const mxArray
       CASE_TYPE(TY_S16, int16_t);
       CASE_TYPE(TY_FLOAT, float);
       CASE_TYPE(TY_DOUBLE, double);
+#undef CASE_TYPE
     default:
-      mexErrMsgTxt("internal error");
+      mexErrMsgTxt("mexArrayToStruct() internal error, field type not recognized");
     }
   }
   *Pcount = count;
