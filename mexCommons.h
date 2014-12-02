@@ -13,16 +13,7 @@ extern "C" {
 #endif
 
 enum _ftype {TY_U32, TY_U16, TY_S16, TY_FLOAT, TY_S32, TY_DOUBLE};
-static inline size_t sizeof_ftype(enum _ftype ftype) {
-  switch (ftype) {
-  case TY_U32: return sizeof(uint32_t);
-  case TY_U16: return sizeof(uint16_t);
-  case TY_S16: return sizeof(int16_t);
-  case TY_FLOAT: return sizeof(float);
-  case TY_S32: return sizeof(int32_t);
-  case TY_DOUBLE: return sizeof(double);
-  }
-}
+size_t sizeof_ftype(enum _ftype ftype);
 
 /*! descriptions of a field in a structure
  */

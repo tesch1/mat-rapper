@@ -50,6 +50,19 @@ int mexCommonsPrintfCallback(const char *format, ...)
   return ret;
 }
 
+size_t sizeof_ftype(enum _ftype ftype)
+{
+  switch (ftype) {
+  case TY_U32: return sizeof(uint32_t);
+  case TY_U16: return sizeof(uint16_t);
+  case TY_S16: return sizeof(int16_t);
+  case TY_FLOAT: return sizeof(float);
+  case TY_S32: return sizeof(int32_t);
+  case TY_DOUBLE: return sizeof(double);
+  }
+  return 0;
+}
+
 /* to figure out compiler alignment - of course you have to compile this
  * with the same compiler & settings as the caller. */
 struct teststruct2 {
@@ -74,8 +87,6 @@ static void grok_fielddesc(const struct_fielddesc_t * sfields,
   nfields = ii;
   if (nfields == 100)
     mexWarnMsgTxt("mexCommons: more than 100 fields in struct desc, maybe forgot to terminate?");
-
-  mexPrintf("mexCommons: structalign: %d", structalign);
 
   /* find last field and its length */
   for (ii = 0; ii < nfields; ii++) {
@@ -121,7 +132,7 @@ mxArray * mexStructToArray(struct_fielddesc_t * sfields, size_t count, void * ba
       case FTYPEID: {                                                   \
         CTYPE * data;                                                   \
         array_count = sfields[ii].size / sizeof(CTYPE);                 \
-        field_value = mxCreateNumericMatrix(array_count, count,         \
+        field_value = mxCreateNumericMatrix(count, array_count,         \
                                             MXTYPE, mxREAL);            \
         data = mxGetData(field_value);                                  \
         for (jj = 0; jj < count; jj++) {                                \
@@ -212,9 +223,9 @@ void * mexArrayToStruct(struct_fielddesc_t * sfields, const mxArray * array, mwS
     return NULL;
   }
 
-  //#ifdef DEBUG
+#ifdef DEBUG
   mexPrintf("mexArrayToStruct count: %d structbytes: %d\n", (int)count, structbytes);
-  //#endif
+#endif
 
   /* get mxArrays into each field */
   for (ii = 0; ii < nfields; ii++) {
