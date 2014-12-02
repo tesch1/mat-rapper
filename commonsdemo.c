@@ -18,6 +18,7 @@
 
 #include "mexCommons.h"
 
+/*! just some c structure */
 typedef struct {
   double d1;
   float f1;
@@ -25,7 +26,7 @@ typedef struct {
   float f2[2];
 } demo_struct;
 
-/*! descriptions of all fields in an varian main header
+/*! descriptions of all fields in some structure
  */
 static struct_fielddesc_t ds_fields[] = {
   MC_FIELD_DEF(d1, TY_DOUBLE, demo_struct),
