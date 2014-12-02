@@ -13,6 +13,16 @@ extern "C" {
 #endif
 
 enum _ftype {TY_U32, TY_U16, TY_S16, TY_FLOAT, TY_S32, TY_DOUBLE};
+static inline size_t sizeof_ftype(enum _ftype ftype) {
+  switch (ftype) {
+  case TY_U32: return sizeof(uint32_t);
+  case TY_U16: return sizeof(uint16_t);
+  case TY_S16: return sizeof(int16_t);
+  case TY_FLOAT: return sizeof(float);
+  case TY_S32: return sizeof(int32_t);
+  case TY_DOUBLE: return sizeof(double);
+  }
+}
 
 /*! descriptions of a field in a structure
  */
@@ -28,8 +38,11 @@ void * mexArrayToStruct(struct_fielddesc_t * sfields, const mxArray * array, mwS
 
 int mexCommonsPrintfCallback(const char *format, ...);
 
-#define MC_FIELD_DEF(fname, ftype, structtype) {#fname, (size_t)&((structtype*)NULL)->fname, \
-      sizeof(((structtype*)NULL)->fname), ftype}
+#define MC_FIELD_DEF(fname, ftype, structtype)                          \
+  { #fname,                                                             \
+      (size_t)&((structtype*)NULL)->fname,                              \
+      sizeof(((structtype*)NULL)->fname),                               \
+      ftype }
 
 #ifndef MAX
 #define MAX(a,b) ((a)>(b)?(a):(b))

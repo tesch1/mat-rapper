@@ -50,10 +50,11 @@ int mexCommonsPrintfCallback(const char *format, ...)
   return ret;
 }
 
-/* to figure out compiler alignment */
-struct teststruct {
+/* to figure out compiler alignment - of course you have to compile this
+ * with the same compiler & settings as the caller. */
+struct teststruct2 {
+  char zerofield;
   double firstfield;
-  char testfield;
 };
 
 /* gather some info about the fields */
@@ -62,26 +63,24 @@ static void grok_fielddesc(const struct_fielddesc_t * sfields,
 {
   int nfields;
   size_t structbytes = 0;
-  size_t structalign = sizeof(struct teststruct) - sizeof(double);
+  size_t structalign = 0;
   int ii, jj;
   for (ii = 0; ii < 100; ii++) {
     if (!sfields[ii].name)
       break;
+    structalign = MAX(structalign, sizeof_ftype(sfields[ii].type));
   }
+
   nfields = ii;
   if (nfields == 100)
     mexWarnMsgTxt("mexCommons: more than 100 fields in struct desc, maybe forgot to terminate?");
-  /* Construct outdata */
-  for (ii = 0; ii < nfields; ii++) {
-    int known = 0;
 
-    /* make sure [ii] isnt already accounted for (ie an alias) */
-    for (jj = 0; jj < ii; jj++) {
-      if (sfields[ii].offset == sfields[jj].offset)
-        known = 1;
-    }
-    if (!known)
-      structbytes += sfields[ii].size;
+  mexPrintf("mexCommons: structalign: %d", structalign);
+
+  /* find last field and its length */
+  for (ii = 0; ii < nfields; ii++) {
+    size_t fieldend = sfields[ii].offset + sfields[ii].size;
+    structbytes = fieldend > structbytes ? fieldend : structbytes;
   }
   /* align bytes */
   structbytes = structalign * ((structbytes + structalign - 1) / structalign);
@@ -122,13 +121,14 @@ mxArray * mexStructToArray(struct_fielddesc_t * sfields, size_t count, void * ba
       case FTYPEID: {                                                   \
         CTYPE * data;                                                   \
         array_count = sfields[ii].size / sizeof(CTYPE);                 \
-        field_value = mxCreateNumericMatrix(count, array_count, MXTYPE, mxREAL); \
+        field_value = mxCreateNumericMatrix(array_count, count,         \
+                                            MXTYPE, mxREAL);            \
         data = mxGetData(field_value);                                  \
         for (jj = 0; jj < count; jj++) {                                \
           int kk;                                                       \
           CTYPE * start = (CTYPE *)(base + jj * structbytes + sfields[ii].offset); \
           for (kk = 0; kk < array_count; kk++) {                        \
-            data[kk * count + jj] = start[kk];                          \
+            data[count * kk + jj] = start[kk];                          \
           }                                                             \
         }                                                               \
         break;                                                          \
@@ -212,9 +212,9 @@ void * mexArrayToStruct(struct_fielddesc_t * sfields, const mxArray * array, mwS
     return NULL;
   }
 
-#ifdef DEBUG
+  //#ifdef DEBUG
   mexPrintf("mexArrayToStruct count: %d structbytes: %d\n", (int)count, structbytes);
-#endif
+  //#endif
 
   /* get mxArrays into each field */
   for (ii = 0; ii < nfields; ii++) {
